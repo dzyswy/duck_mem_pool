@@ -24,18 +24,30 @@ int main(int argc, char* argv[])
         buff[i]->set_age(i);
     }
     
-    // for (int i = 0; i < max_size; i++) {
-    //     printf("%d: age=%d\n", i, buff[i]->age());
-    // }
+    for (int i = 0; i < max_size; i++) {
+        printf("%d: age=%d\n", i, buff[i]->age());
+    }
 
-    // for (int i = 0; i < max_size; i++) {
-    //     person_pool.put(buff[i]); 
-    // }
+    for (int i = 0; i < max_size; i++) {
+        person_pool.put(&buff[i]); 
+    }
 
-    // std::cout << "wait key..." << std::endl;
-    // std::getchar();  
+    for (int i = 0; i < max_size; i++) {
+        printf("%d: ptr=%p\n", i, buff[i]);
+    }
 
-    // std::cout << "bye!" << std::endl;
+    for (int i = 0; i < max_size; i++) {
+        buff[i] = person_pool.get(); 
+    }
+
+    for (int i = 0; i < max_size; i++) {
+        printf("%d: age=%d\n", i, buff[i]->age());
+    }
+
+    std::cout << "wait key..." << std::endl;
+    std::getchar();  
+
+    std::cout << "bye!" << std::endl;
 
 
 

@@ -13,13 +13,23 @@ namespace duck {
 namespace object {
 
  
+ 
+class ObjectAllocator
+{
+public:
+    virtual void* allocate() = 0;
+    virtual void deallocate(void** p) = 0;
+};
+
+
 
 
 template<typename T>
 class ObjectPool
 {
 public:
-    ObjectPool(int init_num, int inc_num, int max_num) : init_num_(init_num), inc_num_(inc_num), max_num_(max_num) {
+    ObjectPool(int init_num, int inc_num, int max_num, ObjectAllocator* allocator) 
+        : init_num_(init_num), inc_num_(inc_num), max_num_(max_num), allocator_(allocator) {
 
         alloc_block(init_num_);
     }
@@ -46,21 +56,29 @@ public:
         return p;
     }
 
-    void put(T* p) {
+    void put(T** p) {
 
         std::unique_lock<std::mutex> lock(mutex_);
 
-        for (auto it = used_list_.begin(); it != used_list_.end(); it++) {
-            if ((*it) == p) {
-                free_list_.push_back(p);
-                used_list_.erase(it);
+        T* item = *p;
+        for (auto it = used_list_.begin(); it != used_list_.end(); ) {
+            if ((*it) == item) {
+                free_list_.push_back(item);
+                it = used_list_.erase(it);
+                *p = nullptr;
+            } else {
+                ++it;
             }
         }
     }
 
-    virtual T* allocate() = 0;
-    virtual void deallocate(T* p) = 0;
+    void release() {
+        for (size_t i = 0; i < obj_vec_.size(); i++) {
+            deallocate(&obj_vec_[i]);
+        }
+    }
 
+private:
     void alloc_block(int num) {
         std::unique_lock<std::mutex> lock(mutex_);
 
@@ -75,14 +93,17 @@ public:
         }
     }
 
-    void release() {
-        for (size_t i = 0; i < obj_vec_.size(); i++) {
-            deallocate(obj_vec_[i]);
-        }
+    T* allocate() {
+         T* p = (T*)allocator_->allocate();
+         return p;
     }
 
-protected: 
+    void deallocate(T** p) {
+        allocator_->deallocate((void**)p);
+    }
 
+protected:  
+    ObjectAllocator* allocator_;
     int init_num_;
     int inc_num_;
     int max_num_;

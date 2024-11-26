@@ -25,32 +25,53 @@ protected:
     int age_;
     std::string name_;
 };
- 
 
 
-class PersonPool : public ObjectPool<Person>
+class PersonAllocator : public ObjectAllocator
 {
 public:
-    PersonPool(int age, const std::string& name, int init_num, int inc_num, int max_num) 
-        : ObjectPool(init_num, inc_num, max_num), age_(age), name_(name) {}
+    PersonAllocator(int age, const std::string& name) : age_(age), name_(name) {}
 
-    Person* allocate() override {
+    void* allocate() override {
         Person* p = new Person(age_, name_);
         LOG(INFO) << "allocate person object: " << ((void*)p);
-        return p;
+        return (void*)p;
     }
 
-    void deallocate(Person* p) override {
-        LOG(INFO) << "deallocate person object: " << ((void*)p);
-        delete p;
+    void deallocate(void** p) override {
+        LOG(INFO) << "deallocate person object: " << (*(void**)p);
+        Person** person = (Person**)p;
+        delete *person;
+        *person = nullptr;
     }
-
-    
 
 protected:
     int age_;
     std::string name_;
 };
+
+ 
+
+class PersonPool 
+{
+public:
+    PersonPool(int age, const std::string& name, int init_num, int inc_num, int max_num) 
+        : allocator_(age, name), pool_(init_num, inc_num, max_num, &allocator_) {}
+
+    Person* get() {
+        return pool_.get();
+    }
+
+    void put(Person** p) {
+        pool_.put(p);
+    }
+
+protected:
+    PersonAllocator allocator_;
+    ObjectPool<Person> pool_;
+};
+
+
 
 
 
